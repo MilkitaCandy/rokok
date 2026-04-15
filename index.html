@@ -15,6 +15,24 @@
     <link rel="stylesheet" href="CSS/style.css" />
   </head>
   <body>
+    <div id="age-modal" class="glass-modal">
+      <div class="modal-content">
+        <h2 class="gold-text">Peringatan Usia</h2>
+        <p>
+          Produk ini diperuntukkan bagi konsumen dewasa (18+).<br />Merokok
+          tetap memiliki risiko bagi kesehatan.
+        </p>
+        <div class="modal-buttons">
+          <button class="btn btn-gold" onclick="verifyAge(true)">
+            Ya, Saya 18+
+          </button>
+          <button class="btn btn-text" onclick="verifyAge(false)">
+            Tinggalkan Situs
+          </button>
+        </div>
+      </div>
+    </div>
+
     <nav id="navbar">
       <div class="nav-container">
         <a href="#" class="logo">Ramuan Hisap.</a>
