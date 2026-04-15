@@ -872,14 +872,15 @@ footer {
     transform: translateY(-7px) rotate(-45deg);
   }
 
-  .hero h1 {
-    font-size: 2.5rem;
+.hero h1 { 
+    font-size: 2.8rem; 
   }
-  .hero-content {
-    text-align: center;
+  .hero-content { 
+    text-align: left; 
+    padding-top: 80px; 
   }
-  .hero-overlay {
-    background: rgba(15, 28, 21, 0.8);
+  .hero-overlay { 
+    background: linear-gradient(to right, rgba(15, 28, 21, 0.95), rgba(15, 28, 21, 0.6)); 
   }
   .modal-buttons {
     flex-direction: column;
