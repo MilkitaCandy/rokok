@@ -1,17 +1,3 @@
-// 1. AGE GATE MODAL
-function verifyAge(isAdult) {
-  if (isAdult) {
-    document.getElementById("age-modal").style.display = "none";
-    document.body.style.overflow = "auto";
-  } else {
-    alert("Akses ditolak. Anda harus berusia 18+.");
-    window.location.href = "https://www.google.com";
-  }
-}
-
-window.onload = function () {
-  document.body.style.overflow = "hidden";
-};
 
 // 2. NAVBAR SCROLL EFFECT
 const navbar = document.getElementById("navbar");
