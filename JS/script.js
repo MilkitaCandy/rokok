@@ -104,6 +104,8 @@ if (container && track) {
   let animationID = 0;
   let currentIndex = 0;
   let dragLocked = null; // null = belum ditentukan, true = horizontal drag, false = biarkan scroll vertikal
+  let dragMoved = false; // true kalau gesture ini beneran geser (bukan cuma tap)
+  let hasUserInteracted = false; // true setelah user pertama kali tap/drag slider
 
   // Biarkan browser HP tetap bisa scroll vertikal secara natural,
   // sementara drag horizontal kita handle manual lewat JS.
@@ -172,9 +174,46 @@ if (container && track) {
   const imgElement = track.querySelector('img');
   if (imgElement) imgElement.addEventListener('dragstart', (e) => e.preventDefault());
 
+  // TAP-TO-JUMP: pencet video yang belum aktif -> langsung pindah ke situ
+  wrappers.forEach((wrapper, index) => {
+      wrapper.addEventListener('click', (e) => {
+          // Kalau ini akhir dari swipe/drag (bukan tap biasa), biarkan
+          // dragEnd yang sudah handle snap-nya, jangan diproses dobel.
+          if (dragMoved) {
+              dragMoved = false;
+              return;
+          }
+
+          // Klik pada tombol unmute biar ditangani toggleMute sendiri
+          if (e.target.closest('.unmute-btn')) return;
+
+          hasUserInteracted = true;
+
+          if (index !== currentIndex) {
+              currentIndex = index;
+              centerSlide(currentIndex, true);
+          }
+
+          // Nyalain suara langsung tanpa perlu pencet tombol unmute manual
+          const video = wrapper.querySelector('video');
+          if (video) {
+              video.muted = false;
+              video.play().catch(() => {
+                  // Kalau browser tetap nolak unmuted play, fallback ke muted
+                  video.muted = true;
+                  video.play().catch(() => {});
+              });
+              const btn = wrapper.querySelector('.unmute-btn');
+              if (btn) btn.innerHTML = "Suara Nyala";
+          }
+      });
+  });
+
   function dragStart(e) {
       isDragging = true;
       dragLocked = null;
+      dragMoved = false;
+      hasUserInteracted = true; // gesture user pertama, boleh mulai unmute otomatis
       startX = getPositionX(e);
       startY = getPositionY(e);
       animationID = requestAnimationFrame(animation);
@@ -227,6 +266,7 @@ if (container && track) {
           // Geser slider secara horizontal, cegah scroll halaman ikut jalan
           if (e.cancelable) e.preventDefault();
           currentTranslate = prevTranslate + diffX;
+          if (Math.abs(diffX) > 8) dragMoved = true; // ini swipe, bukan tap biasa
       } else if (dragLocked === false) {
           // User sedang scroll vertikal halaman, batalkan drag slider
           isDragging = false;
@@ -269,7 +309,21 @@ if (container && track) {
           if (Math.abs(centerPoint - wrapperCenter) < 70) {
               if (!wrapper.classList.contains('active')) {
                   wrapper.classList.add('active');
-                  if (video) video.play().catch(() => {});
+                  if (video) {
+                      // Kalau user udah pernah interaksi (tap/swipe), langsung
+                      // nyalain suara tanpa perlu pencet tombol unmute manual.
+                      if (hasUserInteracted) {
+                          video.muted = false;
+                          const btn = wrapper.querySelector('.unmute-btn');
+                          if (btn) btn.innerHTML = "Suara Nyala";
+                      }
+                      video.play().catch(() => {
+                          // Browser bisa aja tetap nolak unmuted autoplay,
+                          // fallback ke muted play biar video tetap jalan.
+                          video.muted = true;
+                          video.play().catch(() => {});
+                      });
+                  }
               }
           } else {
               if (wrapper.classList.contains('active')) {
