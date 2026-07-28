@@ -111,13 +111,31 @@ if (container && track) {
       return wrapper.offsetWidth + marginLeft + marginRight;
   }
 
-  function setInitialPosition() {
+  function centerSlide(index, animated = false) {
       const containerWidth = container.offsetWidth;
       const wrapperWidth = getWrapperStepWidth();
-      currentTranslate = (containerWidth / 2) - (wrapperWidth / 2);
+      currentIndex = index;
+      currentTranslate = (containerWidth / 2) - (wrapperWidth * index) - (wrapperWidth / 2);
       prevTranslate = currentTranslate;
+
+      if (animated) {
+          track.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)';
+      } else {
+          track.style.transition = 'transform 0s ease';
+      }
+
       setSliderPosition();
       updateActiveClass();
+
+      if (animated) {
+          setTimeout(() => {
+              track.style.transition = 'transform 0s ease';
+          }, 450);
+      }
+  }
+
+  function setInitialPosition() {
+      centerSlide(currentIndex, false);
   }
 
   // Event Listeners buat Drag/Swipe
@@ -189,18 +207,7 @@ if (container && track) {
   }
 
   function snapToCurrentSlide() {
-      const containerWidth = container.offsetWidth;
-      const wrapperWidth = getWrapperStepWidth();
-      currentTranslate = (containerWidth / 2) - (wrapperWidth * currentIndex) - (wrapperWidth / 2);
-      prevTranslate = currentTranslate;
-      
-      track.style.transition = 'transform 0.5s ease-out';
-      setSliderPosition();
-      updateActiveClass();
-      
-      setTimeout(() => {
-          track.style.transition = 'transform 0s ease';
-      }, 500);
+      centerSlide(currentIndex, true);
   }
 
   function updateActiveClass() {
@@ -233,7 +240,7 @@ if (container && track) {
   }
 
   window.addEventListener('load', setInitialPosition);
-  window.addEventListener('resize', setInitialPosition);
+  window.addEventListener('resize', () => setInitialPosition());
 }
 
 

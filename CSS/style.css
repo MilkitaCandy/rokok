@@ -707,11 +707,13 @@ nav.scrolled .nav-links a {
 .video-grid {
   display: flex;
   align-items: center;
-  /* Geser awal biar video pertama di tengah. JS bakal nimpa ini */
-  transform: translateX(0px); 
-  transition: transform 0.5s ease-out; /* Animasi geser yang halus */
-  cursor: grab; /* Ubah kursor jadi tangan buat isyarat bisa ditarik */
+  transform: translateX(0px);
+  transition: transform 0.5s ease-out;
+  cursor: grab;
   will-change: transform;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .video-grid:active {
