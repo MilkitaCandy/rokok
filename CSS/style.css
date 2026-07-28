@@ -1169,18 +1169,20 @@ footer {
 }
 
 @media (max-width: 768px) {
+  .slider-container {
+    padding: 40px 0;
+  }
+
   .video-grid {
-    /* Paksa balik menyamping biar bisa di-swipe */
-    flex-direction: row; 
-    
-    /* Biar pas di tengah layar HP waktu digeser */
-    padding: 0 calc(50% - 90px); 
-    gap: 15px; 
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
   }
 
   .video-wrapper {
-    /* Ukuran video dikecilin dikit biar pas di genggaman HP */
-    flex: 0 0 180px; 
-    max-width: none; /* Matiin max-width yang lama */
+    flex: 0 0 180px;
+    max-width: none;
+    margin: 0 10px;
   }
 }

@@ -102,10 +102,19 @@ if (container && track) {
   let animationID = 0;
   let currentIndex = 0;
 
+  function getWrapperStepWidth() {
+      if (!wrappers.length) return 0;
+      const wrapper = wrappers[0];
+      const styles = window.getComputedStyle(wrapper);
+      const marginLeft = parseFloat(styles.marginLeft) || 0;
+      const marginRight = parseFloat(styles.marginRight) || 0;
+      return wrapper.offsetWidth + marginLeft + marginRight;
+  }
+
   function setInitialPosition() {
       const containerWidth = container.offsetWidth;
-      const wrapperWidth = wrappers[0].offsetWidth + 30; // Lebar + Margin
-      currentTranslate = (containerWidth / 2) - (wrapperWidth / 2) - 15; 
+      const wrapperWidth = getWrapperStepWidth();
+      currentTranslate = (containerWidth / 2) - (wrapperWidth / 2);
       prevTranslate = currentTranslate;
       setSliderPosition();
       updateActiveClass();
@@ -181,7 +190,7 @@ if (container && track) {
 
   function snapToCurrentSlide() {
       const containerWidth = container.offsetWidth;
-      const wrapperWidth = wrappers[0].offsetWidth + 30;
+      const wrapperWidth = getWrapperStepWidth();
       currentTranslate = (containerWidth / 2) - (wrapperWidth * currentIndex) - (wrapperWidth / 2);
       prevTranslate = currentTranslate;
       
