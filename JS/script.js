@@ -112,10 +112,18 @@ if (container && track) {
   }
 
   function centerSlide(index, animated = false) {
-      const containerWidth = container.offsetWidth;
-      const wrapperWidth = getWrapperStepWidth();
+      const targetWrapper = wrappers[index];
+      if (!targetWrapper) return;
+
       currentIndex = index;
-      currentTranslate = (containerWidth / 2) - (wrapperWidth * index) - (wrapperWidth / 2);
+
+      const containerRect = container.getBoundingClientRect();
+      const wrapperRect = targetWrapper.getBoundingClientRect();
+      const containerCenter = containerRect.left + (containerRect.width / 2);
+      const wrapperCenter = wrapperRect.left + (wrapperRect.width / 2);
+      const delta = containerCenter - wrapperCenter;
+
+      currentTranslate += delta;
       prevTranslate = currentTranslate;
 
       if (animated) {
@@ -135,7 +143,9 @@ if (container && track) {
   }
 
   function setInitialPosition() {
-      centerSlide(currentIndex, false);
+      requestAnimationFrame(() => {
+          centerSlide(currentIndex, false);
+      });
   }
 
   // Event Listeners buat Drag/Swipe
@@ -162,8 +172,8 @@ if (container && track) {
       isDragging = false;
       cancelAnimationFrame(animationID);
       
-      const containerWidth = container.offsetWidth;
-      const centerPoint = containerWidth / 2;
+      const containerRect = container.getBoundingClientRect();
+      const centerPoint = containerRect.left + (containerRect.width / 2);
 
       let closestIndex = 0;
       let minDistance = Infinity;
