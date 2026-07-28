@@ -372,6 +372,13 @@ if (container && track) {
       if (video) {
           video.addEventListener('loadedmetadata', () => {
               centerSlide(currentIndex, false);
+
+              // Trik kecil: beberapa browser (Safari/iOS) belum nge-render
+              // frame pertama cuma dari loadedmetadata, jadi dipaksa seek
+              // sedikit biar frame-nya kegambar dan jadi thumbnail natural.
+              if (video.currentTime === 0) {
+                  video.currentTime = 0.01;
+              }
           }, { once: true });
 
           // Default: anggap paused dulu sampai event 'play' pertama nembak
