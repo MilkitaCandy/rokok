@@ -391,3 +391,4 @@ if (container && track) {
     scrollPauseObserver.observe(container);
   }
 }
+
