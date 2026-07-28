@@ -190,21 +190,35 @@ if (container && track) {
           hasUserInteracted = true;
 
           if (index !== currentIndex) {
+              // Video lain diklik -> pindah & langsung mainkan dengan suara
               currentIndex = index;
               centerSlide(currentIndex, true);
-          }
 
-          // Nyalain suara langsung tanpa perlu pencet tombol unmute manual
-          const video = wrapper.querySelector('video');
-          if (video) {
-              video.muted = false;
-              video.play().catch(() => {
-                  // Kalau browser tetap nolak unmuted play, fallback ke muted
-                  video.muted = true;
-                  video.play().catch(() => {});
-              });
-              const btn = wrapper.querySelector('.unmute-btn');
-              if (btn) btn.innerHTML = "Suara Nyala";
+              const video = wrapper.querySelector('video');
+              if (video) {
+                  video.muted = false;
+                  video.play().catch(() => {
+                      // Kalau browser tetap nolak unmuted play, fallback ke muted
+                      video.muted = true;
+                      video.play().catch(() => {});
+                  });
+                  const btn = wrapper.querySelector('.unmute-btn');
+                  if (btn) btn.innerHTML = "Suara Nyala";
+              }
+          } else {
+              // Video yang sama (lagi aktif) diklik lagi -> toggle play/pause
+              const video = wrapper.querySelector('video');
+              if (video) {
+                  if (video.paused) {
+                      video.muted = false;
+                      video.play().catch(() => {
+                          video.muted = true;
+                          video.play().catch(() => {});
+                      });
+                  } else {
+                      video.pause();
+                  }
+              }
           }
       });
   });
