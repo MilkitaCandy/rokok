@@ -368,6 +368,31 @@ if (container && track) {
           }, { once: true });
       }
   });
+
+  // AUTO-PAUSE SAAT DI-SCROLL: kalau area slider keluar dari layar
+  // (user scroll ke atas/bawah), video yang lagi aktif otomatis pause.
+  // Begitu slider kelihatan lagi di layar, video lanjut main lagi.
+  if ('IntersectionObserver' in window) {
+      const scrollPauseObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+              const activeWrapper = wrappers.find((w) => w.classList.contains('active'));
+              if (!activeWrapper) return;
+
+              const video = activeWrapper.querySelector('video');
+              if (!video) return;
+
+              if (entry.isIntersecting) {
+                  // Slider kelihatan lagi di layar -> lanjutkan video yang tadi aktif
+                  video.play().catch(() => {});
+              } else {
+                  // Slider udah di-scroll keluar layar -> pause videonya
+                  video.pause();
+              }
+          });
+      }, { threshold: 0.25 }); // dianggap "keluar layar" kalau kelihatan kurang dari 25%
+
+      scrollPauseObserver.observe(container);
+  }
 }
 
 
