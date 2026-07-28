@@ -102,13 +102,24 @@ if (container && track) {
   let animationID = 0;
   let currentIndex = 0;
 
-  function getWrapperStepWidth() {
-      if (!wrappers.length) return 0;
-      const wrapper = wrappers[0];
+  function getWrapperMetrics(wrapper) {
       const styles = window.getComputedStyle(wrapper);
       const marginLeft = parseFloat(styles.marginLeft) || 0;
       const marginRight = parseFloat(styles.marginRight) || 0;
-      return wrapper.offsetWidth + marginLeft + marginRight;
+      return {
+          width: wrapper.offsetWidth,
+          marginLeft,
+          marginRight,
+      };
+  }
+
+  function getOffsetBeforeIndex(index) {
+      let offset = 0;
+      for (let i = 0; i < index; i += 1) {
+          const metric = getWrapperMetrics(wrappers[i]);
+          offset += metric.width + metric.marginLeft + metric.marginRight;
+      }
+      return offset;
   }
 
   function centerSlide(index, animated = false) {
@@ -117,13 +128,11 @@ if (container && track) {
 
       currentIndex = index;
 
-      const containerRect = container.getBoundingClientRect();
-      const wrapperRect = targetWrapper.getBoundingClientRect();
-      const containerCenter = containerRect.left + (containerRect.width / 2);
-      const wrapperCenter = wrapperRect.left + (wrapperRect.width / 2);
-      const delta = containerCenter - wrapperCenter;
+      const containerWidth = container.offsetWidth;
+      const metric = getWrapperMetrics(targetWrapper);
+      const targetCenter = getOffsetBeforeIndex(index) + metric.marginLeft + (metric.width / 2);
 
-      currentTranslate += delta;
+      currentTranslate = (containerWidth / 2) - targetCenter;
       prevTranslate = currentTranslate;
 
       if (animated) {
@@ -144,7 +153,9 @@ if (container && track) {
 
   function setInitialPosition() {
       requestAnimationFrame(() => {
-          centerSlide(currentIndex, false);
+          requestAnimationFrame(() => {
+              centerSlide(currentIndex, false);
+          });
       });
   }
 
@@ -160,6 +171,13 @@ if (container && track) {
   // Cegah default drag gambar
   const imgElement = track.querySelector('img');
   if (imgElement) imgElement.addEventListener('dragstart', (e) => e.preventDefault());
+
+  wrappers.forEach((wrapper) => {
+      const video = wrapper.querySelector('video');
+      if (video) {
+          video.addEventListener('loadedmetadata', setInitialPosition);
+      }
+  });
 
   function dragStart(e) {
       isDragging = true;
@@ -249,7 +267,10 @@ if (container && track) {
       });
   }
 
-  window.addEventListener('load', setInitialPosition);
+  window.addEventListener('load', () => {
+      setInitialPosition();
+      setTimeout(setInitialPosition, 250);
+  });
   window.addEventListener('resize', () => setInitialPosition());
 }
 
