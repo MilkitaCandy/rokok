@@ -87,6 +87,7 @@ reveal();
 
 /* =========================================
    6. VIDEO COVERFLOW SLIDER (EFEK ZOOM TENGAH)
+   -- Versi diperbaiki: stabil & center di HP --
 ========================================= */
 const container = document.getElementById('sliderContainer');
 const track = document.getElementById('videoTrack');
@@ -97,10 +98,16 @@ if (container && track) {
 
   let isDragging = false;
   let startX = 0;
+  let startY = 0;
   let currentTranslate = 0;
   let prevTranslate = 0;
   let animationID = 0;
   let currentIndex = 0;
+  let dragLocked = null; // null = belum ditentukan, true = horizontal drag, false = biarkan scroll vertikal
+
+  // Biarkan browser HP tetap bisa scroll vertikal secara natural,
+  // sementara drag horizontal kita handle manual lewat JS.
+  track.style.touchAction = 'pan-y';
 
   function getWrapperStepWidth() {
       if (!wrappers.length) return 0;
@@ -111,19 +118,18 @@ if (container && track) {
       return wrapper.offsetWidth + marginLeft + marginRight;
   }
 
+  function getSlideTranslate(index) {
+      const containerWidth = container.offsetWidth;
+      const stepWidth = getWrapperStepWidth();
+      return (containerWidth / 2) - (stepWidth * index) - (stepWidth / 2);
+  }
+
   function centerSlide(index, animated = false) {
       const targetWrapper = wrappers[index];
       if (!targetWrapper) return;
 
       currentIndex = index;
-
-      const containerRect = container.getBoundingClientRect();
-      const wrapperRect = targetWrapper.getBoundingClientRect();
-      const containerCenter = containerRect.left + (containerRect.width / 2);
-      const wrapperCenter = wrapperRect.left + (wrapperRect.width / 2);
-      const delta = containerCenter - wrapperCenter;
-
-      currentTranslate += delta;
+      currentTranslate = getSlideTranslate(index);
       prevTranslate = currentTranslate;
 
       if (animated) {
@@ -142,20 +148,25 @@ if (container && track) {
       }
   }
 
+  // Di HP, offsetWidth kadang masih 0 atau belum akurat saat 'load' baru saja
+  // ditembak (address bar belum settle, font/video belum selesai layout).
+  // requestAnimationFrame + sedikit delay memastikan ukuran sudah final.
   function setInitialPosition() {
       requestAnimationFrame(() => {
-          centerSlide(currentIndex, false);
+          requestAnimationFrame(() => {
+              centerSlide(currentIndex, false);
+          });
       });
   }
 
   // Event Listeners buat Drag/Swipe
   track.addEventListener('mousedown', dragStart);
-  track.addEventListener('touchstart', dragStart, {passive: true});
+  track.addEventListener('touchstart', dragStart, { passive: true });
   track.addEventListener('mouseup', dragEnd);
   track.addEventListener('touchend', dragEnd);
   track.addEventListener('mouseleave', dragEnd);
   track.addEventListener('mousemove', dragAction);
-  track.addEventListener('touchmove', dragAction, {passive: true});
+  track.addEventListener('touchmove', dragAction, { passive: false });
 
   // Cegah default drag gambar
   const imgElement = track.querySelector('img');
@@ -163,15 +174,19 @@ if (container && track) {
 
   function dragStart(e) {
       isDragging = true;
+      dragLocked = null;
       startX = getPositionX(e);
+      startY = getPositionY(e);
       animationID = requestAnimationFrame(animation);
       track.classList.add('grabbing');
   }
 
   function dragEnd() {
+      if (!isDragging) return;
       isDragging = false;
+      dragLocked = null;
       cancelAnimationFrame(animationID);
-      
+
       const containerRect = container.getBoundingClientRect();
       const centerPoint = containerRect.left + (containerRect.width / 2);
 
@@ -182,7 +197,7 @@ if (container && track) {
           const rect = wrapper.getBoundingClientRect();
           const wrapperCenter = rect.left + rect.width / 2;
           const distance = Math.abs(centerPoint - wrapperCenter);
-          
+
           if (distance < minDistance) {
               minDistance = distance;
               closestIndex = index;
@@ -195,10 +210,28 @@ if (container && track) {
   }
 
   function dragAction(e) {
-      if (isDragging) {
-          const currentX = getPositionX(e);
-          const currentMv = currentX - startX;
-          currentTranslate = prevTranslate + currentMv;
+      if (!isDragging) return;
+
+      const currentX = getPositionX(e);
+      const currentY = getPositionY(e);
+      const diffX = currentX - startX;
+      const diffY = currentY - startY;
+
+      // Tentukan sekali di awal gesture: ini geser horizontal (slider)
+      // atau vertikal (scroll halaman)? Supaya tidak bentrok di HP.
+      if (dragLocked === null && (Math.abs(diffX) > 5 || Math.abs(diffY) > 5)) {
+          dragLocked = Math.abs(diffX) > Math.abs(diffY);
+      }
+
+      if (dragLocked) {
+          // Geser slider secara horizontal, cegah scroll halaman ikut jalan
+          if (e.cancelable) e.preventDefault();
+          currentTranslate = prevTranslate + diffX;
+      } else if (dragLocked === false) {
+          // User sedang scroll vertikal halaman, batalkan drag slider
+          isDragging = false;
+          cancelAnimationFrame(animationID);
+          track.classList.remove('grabbing');
       }
   }
 
@@ -206,9 +239,13 @@ if (container && track) {
       return e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
   }
 
+  function getPositionY(e) {
+      return e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+  }
+
   function animation() {
       setSliderPosition();
-      updateActiveClass(); 
+      updateActiveClass();
       if (isDragging) requestAnimationFrame(animation);
   }
 
@@ -239,7 +276,7 @@ if (container && track) {
                   wrapper.classList.remove('active');
                   if (video) {
                       video.pause();
-                      video.currentTime = 0; 
+                      video.currentTime = 0;
                       video.muted = true;
                       const btn = wrapper.querySelector('.unmute-btn');
                       if (btn) btn.innerText = "Suara Mati";
@@ -249,8 +286,34 @@ if (container && track) {
       });
   }
 
+  // Debounce resize: HP sering nembak event resize berkali-kali
+  // (misal saat address bar Safari/Chrome collapse/expand) yang
+  // sebelumnya bikin slider "loncat" tiap kali itu terjadi.
+  let resizeTimeout;
+  function handleResize() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+          centerSlide(currentIndex, false);
+      }, 120);
+  }
+
   window.addEventListener('load', setInitialPosition);
-  window.addEventListener('resize', () => setInitialPosition());
+  window.addEventListener('resize', handleResize);
+  window.addEventListener('orientationchange', () => {
+      // Tunggu sebentar supaya browser HP selesai reflow sebelum re-center
+      setTimeout(() => centerSlide(currentIndex, false), 200);
+  });
+
+  // Sebagian video baru punya ukuran pasti setelah metadata termuat,
+  // jadi re-center juga di titik ini biar tetap presisi di tengah.
+  wrappers.forEach((wrapper) => {
+      const video = wrapper.querySelector('video');
+      if (video) {
+          video.addEventListener('loadedmetadata', () => {
+              centerSlide(currentIndex, false);
+          }, { once: true });
+      }
+  });
 }
 
 
@@ -259,17 +322,17 @@ if (container && track) {
 ========================================= */
 function toggleMute(btn) {
   const wrapper = btn.closest('.video-wrapper');
-  
+
   // Mencegah error kalau misal klik mute tapi bukan video yang di tengah (active)
-  if(!wrapper || !wrapper.classList.contains('active')) return;
+  if (!wrapper || !wrapper.classList.contains('active')) return;
 
   const video = wrapper.querySelector('video');
-  if(video) {
+  if (video) {
       if (video.muted) {
-        video.muted = false; 
+        video.muted = false;
         btn.innerHTML = "Suara Nyala"; // Update teks tombol
       } else {
-        video.muted = true; 
+        video.muted = true;
         btn.innerHTML = "Suara Mati"; // Update teks tombol
       }
   }
