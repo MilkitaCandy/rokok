@@ -184,9 +184,6 @@ if (container && track) {
               return;
           }
 
-          // Klik pada tombol unmute biar ditangani toggleMute sendiri
-          if (e.target.closest('.unmute-btn')) return;
-
           hasUserInteracted = true;
 
           if (index !== currentIndex) {
@@ -202,8 +199,6 @@ if (container && track) {
                       video.muted = true;
                       video.play().catch(() => {});
                   });
-                  const btn = wrapper.querySelector('.unmute-btn');
-                  if (btn) btn.innerHTML = "Suara Nyala";
               }
           } else {
               // Video yang sama (lagi aktif) diklik lagi -> toggle play/pause
@@ -328,8 +323,6 @@ if (container && track) {
                       // nyalain suara tanpa perlu pencet tombol unmute manual.
                       if (hasUserInteracted) {
                           video.muted = false;
-                          const btn = wrapper.querySelector('.unmute-btn');
-                          if (btn) btn.innerHTML = "Suara Nyala";
                       }
                       video.play().catch(() => {
                           // Browser bisa aja tetap nolak unmuted autoplay,
@@ -346,8 +339,6 @@ if (container && track) {
                       video.pause();
                       video.currentTime = 0;
                       video.muted = true;
-                      const btn = wrapper.querySelector('.unmute-btn');
-                      if (btn) btn.innerText = "Suara Mati";
                   }
               }
           }
@@ -406,27 +397,5 @@ if (container && track) {
       }, { threshold: 0.25 }); // dianggap "keluar layar" kalau kelihatan kurang dari 25%
 
       scrollPauseObserver.observe(container);
-  }
-}
-
-
-/* =========================================
-   7. FUNGSI CUSTOM UNMUTE VIDEO (UPDATED)
-========================================= */
-function toggleMute(btn) {
-  const wrapper = btn.closest('.video-wrapper');
-
-  // Mencegah error kalau misal klik mute tapi bukan video yang di tengah (active)
-  if (!wrapper || !wrapper.classList.contains('active')) return;
-
-  const video = wrapper.querySelector('video');
-  if (video) {
-      if (video.muted) {
-        video.muted = false;
-        btn.innerHTML = "Suara Nyala"; // Update teks tombol
-      } else {
-        video.muted = true;
-        btn.innerHTML = "Suara Mati"; // Update teks tombol
-      }
   }
 }
