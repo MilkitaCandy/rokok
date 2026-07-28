@@ -41,6 +41,11 @@ h3,
   color: var(--primary);
 }
 
+img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* =========================================
    02. KELAS UTILITAS (GLOBAL)
 ========================================= */
@@ -74,7 +79,7 @@ h3,
 }
 
 .section-title {
-  font-size: 2.5rem;
+  font-size: clamp(1.9rem, 1.4rem + 2vw, 2.5rem);
   margin-bottom: 30px;
   font-weight: 400;
   position: relative;
@@ -152,10 +157,7 @@ h3,
 ========================================= */
 .glass-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(15, 28, 21, 0.95);
   backdrop-filter: blur(15px);
   display: flex;
@@ -267,6 +269,8 @@ nav.scrolled .nav-links a {
   flex-direction: column;
   cursor: pointer;
   gap: 5px;
+  background: transparent;
+  border: none;
 }
 
 .bar {
@@ -280,7 +284,7 @@ nav.scrolled .nav-links a {
    06. HERO SECTION
 ========================================= */
 .hero {
-  height: 100vh;
+  height: 100svh;
   position: relative;
   display: flex;
   align-items: center;
@@ -291,10 +295,7 @@ nav.scrolled .nav-links a {
 
 .hero-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: linear-gradient(
     to right,
     rgba(15, 28, 21, 0.95),
@@ -324,7 +325,7 @@ nav.scrolled .nav-links a {
 
 .hero h1 {
   color: var(--bg-main);
-  font-size: 4.5rem;
+  font-size: clamp(2.2rem, 1.4rem + 4vw, 4.5rem);
   line-height: 1.1;
   margin-bottom: 25px;
   font-weight: 400;
@@ -351,7 +352,6 @@ nav.scrolled .nav-links a {
   flex: 1;
 }
 
-/* Paragraf rata kanan-kiri khusus section penjelasan */
 .split-text p,
 .feature-card p,
 .commitment-item p {
@@ -390,16 +390,6 @@ nav.scrolled .nav-links a {
   max-width: 400px;
 }
 
-.split-image::before {
-  content: "";
-  position: absolute;
-  top: -20px;
-  left: -20px;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-}
-
 .split-image img {
   width: 100%;
   height: auto;
@@ -408,8 +398,6 @@ nav.scrolled .nav-links a {
 
 .premium-list {
   list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
 .premium-list li {
@@ -435,7 +423,6 @@ nav.scrolled .nav-links a {
 .luxury-edition {
   display: flex;
   background-color: #ffffff;
-  border-radius: 0;
   overflow: hidden;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.07);
   border: 1px solid rgba(212, 175, 55, 0.1);
@@ -449,10 +436,7 @@ nav.scrolled .nav-links a {
 
 .image-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: linear-gradient(to right, rgba(15, 28, 21, 0.2), transparent);
   z-index: 1;
 }
@@ -471,14 +455,11 @@ nav.scrolled .nav-links a {
   grid-template-columns: 1fr 1fr;
   gap: 1px;
   background-color: rgba(212, 175, 55, 0.1);
-  padding: 0;
 }
 
 .luxury-card {
   background-color: #ffffff;
   padding: 60px 40px;
-  border: none;
-  border-radius: 0;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -600,30 +581,18 @@ nav.scrolled .nav-links a {
 }
 
 .feature-card {
-  background: #1a3626;
+  background: var(--primary);
   padding: 40px;
-  border: 1px solid #eee;
   position: relative;
   transition: var(--transition);
   overflow: hidden;
-}
-
-.f-number {
-  font-family: var(--font-heading);
-  font-size: 3rem;
-  color: rgba(212, 175, 55, 0.1);
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  font-weight: 700;
-  transition: var(--transition);
 }
 
 .feature-card h4 {
   margin-bottom: 15px;
   position: relative;
   z-index: 2;
-  color: #d4af37;
+  color: var(--gold);
 }
 
 .feature-card p {
@@ -636,11 +605,6 @@ nav.scrolled .nav-links a {
   border-color: var(--gold);
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-}
-
-.feature-card:hover .f-number {
-  color: rgba(212, 175, 55, 0.3);
-  transform: translateY(10px);
 }
 
 /* =========================================
@@ -690,9 +654,8 @@ nav.scrolled .nav-links a {
 }
 
 /* =========================================
-   12. VIDEO INTRO SHOWCASE (PREMIUM SCALE EFFECT)
+   12. VIDEO SHOWCASE / SLIDER
 ========================================= */
-
 .pause-icon {
   position: absolute;
   top: 50%;
@@ -707,35 +670,32 @@ nav.scrolled .nav-links a {
   justify-content: center;
   transform: translate(-50%, -50%) scale(0.75);
   opacity: 0;
-  pointer-events: none; /* biar klik tetap tembus ke video di belakangnya */
+  pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
-  z-index: 6; /* di atas video, di bawah unmute-btn kalau masih ada */
+  z-index: 6;
 }
- 
+
 .pause-icon svg {
   width: 26px;
   height: 26px;
   fill: var(--gold);
-  margin-left: 3px; /* biar segitiga play keliatan center secara optik */
+  margin-left: 3px;
 }
- 
-/* Cuma tampil kalau video ini yang lagi aktif (di tengah) DAN posisinya paused */
+
 .video-wrapper.active.is-paused .pause-icon {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Bungkus utama untuk ngatur area pandang */
 .slider-container {
   position: relative;
   width: 100%;
-  max-width: 1200px; /* Sesuaikan lebar maksimal area slider */
+  max-width: 1200px;
   margin: 0 auto;
-  overflow: hidden; /* Sembunyiin video yang di luar area */
-  padding: 60px 0; /* Kasih ruang atas bawah buat video yang nge-scale */
+  overflow: hidden;
+  padding: 60px 0;
 }
 
-/* Track tempat video berjejer, digerakkan pakai JS */
 .video-grid {
   display: flex;
   align-items: center;
@@ -749,37 +709,28 @@ nav.scrolled .nav-links a {
 }
 
 .video-grid:active {
-  cursor: grabbing; /* Saat ditarik kursornya nge-kepal */
+  cursor: grabbing;
 }
 
-/* --- STATE DEFAULT (Video Kecil / Thumbnail) --- */
 .video-wrapper {
   position: relative;
-  flex: 0 0 220px; /* Lebar video saat kecil (thumbnail) */
+  flex: 0 0 220px;
   aspect-ratio: 9 / 16;
   border-radius: 16px;
   background-color: #000;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-  
-  /* PENTING: Animasi transisi saat berubah jadi gede */
   transition: transform 0.5s ease, opacity 0.5s ease, box-shadow 0.5s ease;
-  
-  /* Efek default: dikecilin, rada gelap, dan agak blur dikit biar fokus ke tengah */
-  transform: scale(0.8); 
+  transform: scale(0.8);
   opacity: 0.6;
-  filter: blur(1px); 
-  
-  margin: 0 15px; /* Jarak antar thumbnail */
-  overflow: hidden; /* Biar video nggak keluar border radius */
+  filter: blur(1px);
+  margin: 0 15px;
+  overflow: hidden;
   z-index: 1;
 }
 
-/* Wrapper buat nampilin thumbnail foto sebelum video load/active */
-
 .video-wrapper video {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -788,59 +739,40 @@ nav.scrolled .nav-links a {
   border-radius: 16px;
   box-sizing: border-box;
   z-index: 1;
-  opacity: 1; /* SEBELUMNYA: 0 -- ini yang bikin video disembunyikan */
 }
- 
-/* Border emas terang tetap muncul saat video jadi aktif/di tengah */
+
 .video-wrapper.active video {
   border-color: rgba(212, 175, 55, 1);
 }
 
-/* Sembunyiin tombol unmute pas video lagi kecil */
 .video-wrapper .unmute-btn {
   opacity: 0;
-  pointer-events: none; /* Nggak bisa diklik pas kecil */
-  transform: translate(-50%, 20px); /* Muncul dari bawah */
-  transition: all 0.5s ease 0.2s; /* Kasih delay dikit biar keren */
+  pointer-events: none;
+  transform: translate(-50%, 20px);
+  transition: all 0.5s ease 0.2s;
 }
 
-
-/* --- STATE ACTIVE (Video Tengah / Gede / Di-Play) --- */
 .video-wrapper.active {
-  transform: scale(1.1); /* Ngedein video 10% dari ukuran asli */
-  opacity: 1; /* Terang benderang */
-  filter: blur(0px); /* Tajam */
-  box-shadow: 0 20px 40px rgba(212, 175, 55, 0.3); /* Glow emas */
-  z-index: 10; /* Di paling depan */
+  transform: scale(1.1);
+  opacity: 1;
+  filter: blur(0px);
+  box-shadow: 0 20px 40px rgba(212, 175, 55, 0.3);
+  z-index: 10;
 }
 
-.video-wrapper.active video {
-  border-color: rgba(212, 175, 55, 1); /* Border emas terang */
-  opacity: 1; /* Tampilkan video asli */
-}
-
-/* Sembunyiin poster fotonya pas video active */
 .video-wrapper.active .video-poster {
   opacity: 0;
 }
 
-/* Tampilin tombol unmute pas video active */
 .video-wrapper.active .unmute-btn {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, 0px); /* Posisi normal */
+  transform: translate(-50%, 0px);
 }
 
-/* === MODIFIKASI TOMBOL UNMUTE (Biar di Tengah) === */
-.unmute-btn {
-  position: absolute;
-  bottom: 20px;
-  left: 50%; /* Taruh di tengah horizontal */
-  transform: translateX(-50%); /* Offset biar bener-bener center */
-  /* ... sisa kode CSS unmute lo yang lama taruh sini ... */
-  white-space: nowrap; /* Biar teksnya nggak turun ke bawah */
-}
-/* === TOMBOL UNMUTE CUSTOM === */
+/* NOTE: sebelumnya class .unmute-btn didefinisikan 2x dengan posisi
+   berbeda (tengah-bawah vs kanan-bawah) — definisi kedua menimpa yang
+   pertama sehingga kode pertama jadi mubazir. Digabung jadi satu di sini. */
 .unmute-btn {
   position: absolute;
   bottom: 15px;
@@ -860,6 +792,7 @@ nav.scrolled .nav-links a {
   align-items: center;
   gap: 8px;
   transition: var(--transition);
+  white-space: nowrap;
 }
 
 .unmute-btn:hover {
@@ -1015,11 +948,23 @@ footer {
   transform: translateY(0);
 }
 
-/*  16. media queries untuk responsivitas */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
 
-/* Untuk Layar Tablet Besar / Laptop Kecil */
+/* =========================================
+   16. MEDIA QUERIES RESPONSIVITAS
+========================================= */
+
+/* Tablet besar / laptop kecil */
 @media (max-width: 1024px) {
-  /* Tentang Kami / Visi Misi */
   .split-layout {
     flex-direction: column;
     gap: 40px;
@@ -1039,11 +984,7 @@ footer {
     border-top: 1px solid rgba(212, 175, 55, 0.3);
     padding-top: 40px;
   }
-  .split-image::before {
-    display: none;
-  }
 
-  /* Nilai Perusahaan */
   .luxury-edition {
     flex-direction: column;
   }
@@ -1052,7 +993,6 @@ footer {
     height: 400px;
   }
 
-  /* Komitmen */
   .luxury-split {
     grid-template-columns: 1fr;
     gap: 50px;
@@ -1063,16 +1003,21 @@ footer {
   }
 }
 
-/* Mengatur Posisi Sosmed di Layar Desktop */
+/* Posisi sosmed khusus desktop */
 @media (min-width: 769px) {
   .footer-social {
     justify-self: end;
   }
 }
 
-/* Untuk Layar Mobile / Tablet Kecil */
+/* Mobile / tablet kecil — digabung jadi satu blok (sebelumnya 2 blok terpisah) */
 @media (max-width: 768px) {
-  /* Navbar & Hamburger Menu */
+  /* background-attachment:fixed berat & sering patah di mobile Safari */
+  .hero {
+    background-attachment: scroll;
+  }
+
+  /* Navbar & hamburger menu */
   .nav-links {
     position: absolute;
     top: 100%;
@@ -1110,10 +1055,7 @@ footer {
     transform: translateY(-7px) rotate(-45deg);
   }
 
-  /* Hero Banner & Global Titles */
-  .hero h1 {
-    font-size: 2.5rem;
-  }
+  /* Hero & judul global */
   .hero-content {
     text-align: center;
   }
@@ -1128,7 +1070,7 @@ footer {
     text-align: center;
   }
 
-  /* Nilai Perusahaan (Card Swipe) */
+  /* Nilai perusahaan (card swipe) */
   .corp-cards-side {
     display: flex;
     overflow-x: auto;
@@ -1142,7 +1084,7 @@ footer {
     border: 1px solid rgba(212, 175, 55, 0.1);
   }
 
-  /* Gallery Produk */
+  /* Galeri produk */
   .product-gallery {
     grid-template-columns: 1fr;
   }
@@ -1154,7 +1096,7 @@ footer {
     transform: translateY(0);
   }
 
-  /* Peringatan Umur Modal */
+  /* Modal peringatan usia */
   .modal-buttons {
     flex-direction: column;
   }
@@ -1193,20 +1135,17 @@ footer {
     width: 28px;
     height: 28px;
   }
-}
 
-@media (max-width: 768px) {
+  /* Video slider */
   .slider-container {
     padding: 40px 0;
   }
-
   .video-grid {
     flex-direction: row;
     padding: 0;
     gap: 0;
-    justify-content: flex-start; /
+    justify-content: flex-start;
   }
-
   .video-wrapper {
     flex: 0 0 180px;
     max-width: none;

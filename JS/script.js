@@ -1,7 +1,8 @@
 // 1. AGE GATE MODAL
 function verifyAge(isAdult) {
+  const ageModal = document.getElementById("age-modal");
   if (isAdult) {
-    document.getElementById("age-modal").style.display = "none";
+    if (ageModal) ageModal.style.display = "none";
     document.body.style.overflow = "auto";
   } else {
     alert("Akses ditolak. Anda harus berusia 18+.");
@@ -9,24 +10,56 @@ function verifyAge(isAdult) {
   }
 }
 
-// Gunakan addEventListener agar tidak menimpa event load lainnya
-window.addEventListener("load", function () {
-  // Kunci scroll hanya jika modal masih tampil
+// OPTIMASI: cek modal sebelum 'load' (pakai DOMContentLoaded) supaya body
+// langsung terkunci scroll-nya tanpa nunggu semua asset (gambar/video) selesai load.
+// Ini juga menghindari kemungkinan "flash of scrollable content" sesaat.
+document.addEventListener("DOMContentLoaded", function () {
   const ageModal = document.getElementById("age-modal");
   if (ageModal && ageModal.style.display !== "none") {
     document.body.style.overflow = "hidden";
   }
 });
 
-// 2. NAVBAR SCROLL EFFECT
+// 2 & 5. NAVBAR SCROLL EFFECT + SCROLL REVEAL
+// OPTIMASI UTAMA: sebelumnya ada 2 listener 'scroll' terpisah (navbar & reveal),
+// masing-masing jalan di setiap event scroll tanpa throttle -> bisa nembak
+// puluhan kali per detik dan tiap kali reveal() juga looping semua .reveal
+// element + getBoundingClientRect (paksa reflow). Digabung jadi satu listener
+// dengan requestAnimationFrame throttle supaya kerja beratnya cuma sekali
+// per frame render, bukan sekali per event.
 const navbar = document.getElementById("navbar");
-window.addEventListener("scroll", () => {
-  if (window.scrollY > 50) {
-    navbar.classList.add("scrolled");
-  } else {
-    navbar.classList.remove("scrolled");
-  }
-});
+const revealElements = document.querySelectorAll(".reveal");
+
+// OPTIMASI: pakai IntersectionObserver untuk reveal, jauh lebih murah
+// daripada hitung getBoundingClientRect() tiap elemen di setiap scroll event.
+// Browser yang urus deteksi visibility-nya, bukan JS kita yang polling terus.
+if ("IntersectionObserver" in window && revealElements.length) {
+  const revealObserver = new IntersectionObserver(
+    (entries, obs) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("active");
+          obs.unobserve(entry.target); // sekali reveal, gak perlu dipantau lagi
+        }
+      });
+    },
+    { threshold: 0, rootMargin: "0px 0px -100px 0px" } // ~mirip elementVisible=100 di versi lama
+  );
+  revealElements.forEach((el) => revealObserver.observe(el));
+}
+
+let scrollTicking = false;
+function onScroll() {
+  if (scrollTicking) return;
+  scrollTicking = true;
+  requestAnimationFrame(() => {
+    if (navbar) {
+      navbar.classList.toggle("scrolled", window.scrollY > 50);
+    }
+    scrollTicking = false;
+  });
+}
+window.addEventListener("scroll", onScroll, { passive: true });
 
 // 3. HAMBURGER MENU MOBILE
 const mobileMenu = document.getElementById("mobile-menu");
@@ -68,33 +101,19 @@ document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
   });
 });
 
-// 5. SCROLL REVEAL ANIMATION
-function reveal() {
-  var reveals = document.querySelectorAll(".reveal");
-  for (var i = 0; i < reveals.length; i++) {
-    var windowHeight = window.innerHeight;
-    var elementTop = reveals[i].getBoundingClientRect().top;
-    var elementVisible = 100;
-
-    if (elementTop < windowHeight - elementVisible) {
-      reveals[i].classList.add("active");
-    }
-  }
-}
-window.addEventListener("scroll", reveal);
-reveal();
-
 
 /* =========================================
    6. VIDEO COVERFLOW SLIDER (EFEK ZOOM TENGAH)
-   -- Versi diperbaiki: stabil & center di HP --
+   -- Versi dioptimasi: hindari layout thrashing --
 ========================================= */
 const container = document.getElementById('sliderContainer');
 const track = document.getElementById('videoTrack');
 
-// Cek apakah element slider ada di halaman ini (biar gak error di page lain)
 if (container && track) {
   const wrappers = Array.from(track.querySelectorAll('.video-wrapper'));
+  // OPTIMASI: cache elemen video sekali di awal, jangan querySelector('video')
+  // berulang-ulang tiap kali dibutuhkan.
+  const videos = wrappers.map((w) => w.querySelector('video'));
 
   let isDragging = false;
   let startX = 0;
@@ -103,65 +122,64 @@ if (container && track) {
   let prevTranslate = 0;
   let animationID = 0;
   let currentIndex = 0;
-  let dragLocked = null; // null = belum ditentukan, true = horizontal drag, false = biarkan scroll vertikal
-  let dragMoved = false; // true kalau gesture ini beneran geser (bukan cuma tap)
-  let hasUserInteracted = false; // true setelah user pertama kali tap/drag slider
+  let dragLocked = null;
+  let dragMoved = false;
+  let hasUserInteracted = false;
 
-  // Biarkan browser HP tetap bisa scroll vertikal secara natural,
-  // sementara drag horizontal kita handle manual lewat JS.
-  track.style.touchAction = 'pan-y';
+  // OPTIMASI: cache step width & container width, cuma dihitung ulang saat
+  // resize/orientation change, bukan tiap frame animasi (getBoundingClientRect
+  // & offsetWidth memaksa browser reflow kalau dipanggil terus-menerus).
+  let cachedStepWidth = 0;
+  let cachedContainerWidth = 0;
 
-  function getWrapperStepWidth() {
-      if (!wrappers.length) return 0;
+  function recalcDimensions() {
+    cachedContainerWidth = container.offsetWidth;
+    if (wrappers.length) {
       const wrapper = wrappers[0];
       const styles = window.getComputedStyle(wrapper);
       const marginLeft = parseFloat(styles.marginLeft) || 0;
       const marginRight = parseFloat(styles.marginRight) || 0;
-      return wrapper.offsetWidth + marginLeft + marginRight;
+      cachedStepWidth = wrapper.offsetWidth + marginLeft + marginRight;
+    }
   }
 
+  track.style.touchAction = 'pan-y';
+
   function getSlideTranslate(index) {
-      const containerWidth = container.offsetWidth;
-      const stepWidth = getWrapperStepWidth();
-      return (containerWidth / 2) - (stepWidth * index) - (stepWidth / 2);
+    return (cachedContainerWidth / 2) - (cachedStepWidth * index) - (cachedStepWidth / 2);
   }
 
   function centerSlide(index, animated = false) {
-      const targetWrapper = wrappers[index];
-      if (!targetWrapper) return;
+    const targetWrapper = wrappers[index];
+    if (!targetWrapper) return;
 
-      currentIndex = index;
-      currentTranslate = getSlideTranslate(index);
-      prevTranslate = currentTranslate;
+    currentIndex = index;
+    currentTranslate = getSlideTranslate(index);
+    prevTranslate = currentTranslate;
 
-      if (animated) {
-          track.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)';
-      } else {
-          track.style.transition = 'transform 0s ease';
-      }
+    track.style.transition = animated
+      ? 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)'
+      : 'transform 0s ease';
 
-      setSliderPosition();
-      updateActiveClass();
+    setSliderPosition();
+    updateActiveClass();
 
-      if (animated) {
-          setTimeout(() => {
-              track.style.transition = 'transform 0s ease';
-          }, 450);
-      }
+    if (animated) {
+      setTimeout(() => {
+        track.style.transition = 'transform 0s ease';
+      }, 450);
+    }
   }
 
-  // Di HP, offsetWidth kadang masih 0 atau belum akurat saat 'load' baru saja
-  // ditembak (address bar belum settle, font/video belum selesai layout).
-  // requestAnimationFrame + sedikit delay memastikan ukuran sudah final.
   function setInitialPosition() {
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-              centerSlide(currentIndex, false);
-          });
+        recalcDimensions();
+        centerSlide(currentIndex, false);
       });
+    });
   }
 
-  // Event Listeners buat Drag/Swipe
   track.addEventListener('mousedown', dragStart);
   track.addEventListener('touchstart', dragStart, { passive: true });
   track.addEventListener('mouseup', dragEnd);
@@ -170,246 +188,206 @@ if (container && track) {
   track.addEventListener('mousemove', dragAction);
   track.addEventListener('touchmove', dragAction, { passive: false });
 
-  // Cegah default drag gambar
   const imgElement = track.querySelector('img');
   if (imgElement) imgElement.addEventListener('dragstart', (e) => e.preventDefault());
 
-  // TAP-TO-JUMP: pencet video yang belum aktif -> langsung pindah ke situ
+  function playVideo(video, unmuted) {
+    if (!video) return;
+    if (unmuted) video.muted = false;
+    video.play().catch(() => {
+      video.muted = true;
+      video.play().catch(() => {});
+    });
+  }
+
   wrappers.forEach((wrapper, index) => {
-      wrapper.addEventListener('click', (e) => {
-          // Kalau ini akhir dari swipe/drag (bukan tap biasa), biarkan
-          // dragEnd yang sudah handle snap-nya, jangan diproses dobel.
-          if (dragMoved) {
-              dragMoved = false;
-              return;
-          }
+    wrapper.addEventListener('click', () => {
+      if (dragMoved) {
+        dragMoved = false;
+        return;
+      }
 
-          hasUserInteracted = true;
+      hasUserInteracted = true;
+      const video = videos[index];
 
-          if (index !== currentIndex) {
-              // Video lain diklik -> pindah & langsung mainkan dengan suara
-              currentIndex = index;
-              centerSlide(currentIndex, true);
-
-              const video = wrapper.querySelector('video');
-              if (video) {
-                  video.muted = false;
-                  video.play().catch(() => {
-                      // Kalau browser tetap nolak unmuted play, fallback ke muted
-                      video.muted = true;
-                      video.play().catch(() => {});
-                  });
-              }
-          } else {
-              // Video yang sama (lagi aktif) diklik lagi -> toggle play/pause
-              const video = wrapper.querySelector('video');
-              if (video) {
-                  if (video.paused) {
-                      video.muted = false;
-                      video.play().catch(() => {
-                          video.muted = true;
-                          video.play().catch(() => {});
-                      });
-                  } else {
-                      video.pause();
-                  }
-              }
-          }
-      });
+      if (index !== currentIndex) {
+        currentIndex = index;
+        centerSlide(currentIndex, true);
+        playVideo(video, true);
+      } else if (video) {
+        if (video.paused) {
+          playVideo(video, true);
+        } else {
+          video.pause();
+        }
+      }
+    });
   });
 
   function dragStart(e) {
-      isDragging = true;
-      dragLocked = null;
-      dragMoved = false;
-      hasUserInteracted = true; // gesture user pertama, boleh mulai unmute otomatis
-      startX = getPositionX(e);
-      startY = getPositionY(e);
-      animationID = requestAnimationFrame(animation);
-      track.classList.add('grabbing');
+    isDragging = true;
+    dragLocked = null;
+    dragMoved = false;
+    hasUserInteracted = true;
+    startX = getPositionX(e);
+    startY = getPositionY(e);
+    animationID = requestAnimationFrame(animation);
+    track.classList.add('grabbing');
   }
 
+  // OPTIMASI: dulu dragEnd mencari closestIndex dengan getBoundingClientRect()
+  // per wrapper (forced reflow x jumlah video). Sekarang dihitung murni dari
+  // currentTranslate/stepWidth yang sudah kita cache -> tanpa reflow sama sekali.
   function dragEnd() {
-      if (!isDragging) return;
-      isDragging = false;
-      dragLocked = null;
-      cancelAnimationFrame(animationID);
+    if (!isDragging) return;
+    isDragging = false;
+    dragLocked = null;
+    cancelAnimationFrame(animationID);
 
-      const containerRect = container.getBoundingClientRect();
-      const centerPoint = containerRect.left + (containerRect.width / 2);
+    const rawIndex = ((cachedContainerWidth / 2) - currentTranslate - (cachedStepWidth / 2)) / cachedStepWidth;
+    const closestIndex = Math.min(
+      wrappers.length - 1,
+      Math.max(0, Math.round(rawIndex))
+    );
 
-      let closestIndex = 0;
-      let minDistance = Infinity;
-
-      wrappers.forEach((wrapper, index) => {
-          const rect = wrapper.getBoundingClientRect();
-          const wrapperCenter = rect.left + rect.width / 2;
-          const distance = Math.abs(centerPoint - wrapperCenter);
-
-          if (distance < minDistance) {
-              minDistance = distance;
-              closestIndex = index;
-          }
-      });
-
-      currentIndex = closestIndex;
-      snapToCurrentSlide();
-      track.classList.remove('grabbing');
+    currentIndex = closestIndex;
+    snapToCurrentSlide();
+    track.classList.remove('grabbing');
   }
 
   function dragAction(e) {
-      if (!isDragging) return;
+    if (!isDragging) return;
 
-      const currentX = getPositionX(e);
-      const currentY = getPositionY(e);
-      const diffX = currentX - startX;
-      const diffY = currentY - startY;
+    const currentX = getPositionX(e);
+    const currentY = getPositionY(e);
+    const diffX = currentX - startX;
+    const diffY = currentY - startY;
 
-      // Tentukan sekali di awal gesture: ini geser horizontal (slider)
-      // atau vertikal (scroll halaman)? Supaya tidak bentrok di HP.
-      if (dragLocked === null && (Math.abs(diffX) > 5 || Math.abs(diffY) > 5)) {
-          dragLocked = Math.abs(diffX) > Math.abs(diffY);
-      }
+    if (dragLocked === null && (Math.abs(diffX) > 5 || Math.abs(diffY) > 5)) {
+      dragLocked = Math.abs(diffX) > Math.abs(diffY);
+    }
 
-      if (dragLocked) {
-          // Geser slider secara horizontal, cegah scroll halaman ikut jalan
-          if (e.cancelable) e.preventDefault();
-          currentTranslate = prevTranslate + diffX;
-          if (Math.abs(diffX) > 8) dragMoved = true; // ini swipe, bukan tap biasa
-      } else if (dragLocked === false) {
-          // User sedang scroll vertikal halaman, batalkan drag slider
-          isDragging = false;
-          cancelAnimationFrame(animationID);
-          track.classList.remove('grabbing');
-      }
+    if (dragLocked) {
+      if (e.cancelable) e.preventDefault();
+      currentTranslate = prevTranslate + diffX;
+      if (Math.abs(diffX) > 8) dragMoved = true;
+    } else if (dragLocked === false) {
+      isDragging = false;
+      cancelAnimationFrame(animationID);
+      track.classList.remove('grabbing');
+    }
   }
 
   function getPositionX(e) {
-      return e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    return e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
   }
 
   function getPositionY(e) {
-      return e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+    return e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
   }
 
   function animation() {
-      setSliderPosition();
-      updateActiveClass();
-      if (isDragging) requestAnimationFrame(animation);
+    setSliderPosition();
+    updateActiveClass();
+    if (isDragging) requestAnimationFrame(animation);
   }
 
   function setSliderPosition() {
-      track.style.transform = `translateX(${currentTranslate}px)`;
+    track.style.transform = `translateX(${currentTranslate}px)`;
   }
 
   function snapToCurrentSlide() {
-      centerSlide(currentIndex, true);
+    centerSlide(currentIndex, true);
   }
 
+  // OPTIMASI: index "active" dihitung langsung dari currentTranslate/stepWidth
+  // (matematika murni), bukan dengan getBoundingClientRect() tiap wrapper di
+  // tiap animation frame. Ini penghematan terbesar karena fungsi ini dipanggil
+  // terus-menerus selama drag & animasi snap.
+  let lastActiveIndex = -1;
   function updateActiveClass() {
-      const containerWidth = container.offsetWidth;
-      const centerPoint = containerWidth / 2;
+    if (!cachedStepWidth) return;
+    const rawIndex = ((cachedContainerWidth / 2) - currentTranslate - (cachedStepWidth / 2)) / cachedStepWidth;
+    const nearestIndex = Math.min(
+      wrappers.length - 1,
+      Math.max(0, Math.round(rawIndex))
+    );
 
-      wrappers.forEach((wrapper) => {
-          const rect = wrapper.getBoundingClientRect();
-          const wrapperCenter = rect.left + rect.width / 2;
-          const video = wrapper.querySelector('video');
+    if (nearestIndex === lastActiveIndex) return; // gak ada perubahan, skip semua DOM write
+    lastActiveIndex = nearestIndex;
 
-          if (Math.abs(centerPoint - wrapperCenter) < 70) {
-              if (!wrapper.classList.contains('active')) {
-                  wrapper.classList.add('active');
-                  if (video) {
-                      // Kalau user udah pernah interaksi (tap/swipe), langsung
-                      // nyalain suara tanpa perlu pencet tombol unmute manual.
-                      if (hasUserInteracted) {
-                          video.muted = false;
-                      }
-                      video.play().catch(() => {
-                          // Browser bisa aja tetap nolak unmuted autoplay,
-                          // fallback ke muted play biar video tetap jalan.
-                          video.muted = true;
-                          video.play().catch(() => {});
-                      });
-                  }
-              }
-          } else {
-              if (wrapper.classList.contains('active')) {
-                  wrapper.classList.remove('active');
-                  if (video) {
-                      video.pause();
-                      video.currentTime = 0;
-                      video.muted = true;
-                  }
-              }
+    wrappers.forEach((wrapper, i) => {
+      const video = videos[i];
+      if (i === nearestIndex) {
+        if (!wrapper.classList.contains('active')) {
+          wrapper.classList.add('active');
+          if (video) {
+            if (hasUserInteracted) video.muted = false;
+            playVideo(video, false);
           }
-      });
+        }
+      } else if (wrapper.classList.contains('active')) {
+        wrapper.classList.remove('active');
+        if (video) {
+          video.pause();
+          video.currentTime = 0;
+          video.muted = true;
+        }
+      }
+    });
   }
 
-  // Debounce resize: HP sering nembak event resize berkali-kali
-  // (misal saat address bar Safari/Chrome collapse/expand) yang
-  // sebelumnya bikin slider "loncat" tiap kali itu terjadi.
   let resizeTimeout;
   function handleResize() {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-          centerSlide(currentIndex, false);
-      }, 120);
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      recalcDimensions();
+      centerSlide(currentIndex, false);
+    }, 120);
   }
 
   window.addEventListener('load', setInitialPosition);
-  window.addEventListener('resize', handleResize);
+  window.addEventListener('resize', handleResize, { passive: true });
   window.addEventListener('orientationchange', () => {
-      // Tunggu sebentar supaya browser HP selesai reflow sebelum re-center
-      setTimeout(() => centerSlide(currentIndex, false), 200);
+    setTimeout(() => {
+      recalcDimensions();
+      centerSlide(currentIndex, false);
+    }, 200);
   });
 
-  // Sebagian video baru punya ukuran pasti setelah metadata termuat,
-  // jadi re-center juga di titik ini biar tetap presisi di tengah.
-  // Sekalian pasang listener play/pause buat nampilin ikon pause otomatis,
-  // apapun penyebabnya (klik, auto-pause scroll, dll).
-  wrappers.forEach((wrapper) => {
-      const video = wrapper.querySelector('video');
-      if (video) {
-          video.addEventListener('loadedmetadata', () => {
-              centerSlide(currentIndex, false);
+  videos.forEach((video, i) => {
+    const wrapper = wrappers[i];
+    if (video) {
+      video.addEventListener('loadedmetadata', () => {
+        recalcDimensions();
+        centerSlide(currentIndex, false);
+        if (video.currentTime === 0) {
+          video.currentTime = 0.01;
+        }
+      }, { once: true });
 
-              // Trik kecil: beberapa browser (Safari/iOS) belum nge-render
-              // frame pertama cuma dari loadedmetadata, jadi dipaksa seek
-              // sedikit biar frame-nya kegambar dan jadi thumbnail natural.
-              if (video.currentTime === 0) {
-                  video.currentTime = 0.01;
-              }
-          }, { once: true });
-
-          // Default: anggap paused dulu sampai event 'play' pertama nembak
-          wrapper.classList.add('is-paused');
-          video.addEventListener('play', () => wrapper.classList.remove('is-paused'));
-          video.addEventListener('pause', () => wrapper.classList.add('is-paused'));
-      }
+      wrapper.classList.add('is-paused');
+      video.addEventListener('play', () => wrapper.classList.remove('is-paused'));
+      video.addEventListener('pause', () => wrapper.classList.add('is-paused'));
+    }
   });
 
-  // AUTO-PAUSE SAAT DI-SCROLL: kalau area slider keluar dari layar
-  // (user scroll ke atas/bawah), video yang lagi aktif otomatis pause.
-  // Begitu slider kelihatan lagi di layar, video lanjut main lagi.
   if ('IntersectionObserver' in window) {
-      const scrollPauseObserver = new IntersectionObserver((entries) => {
-          entries.forEach((entry) => {
-              const activeWrapper = wrappers.find((w) => w.classList.contains('active'));
-              if (!activeWrapper) return;
+    const scrollPauseObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const activeIndex = wrappers.findIndex((w) => w.classList.contains('active'));
+        if (activeIndex === -1) return;
+        const video = videos[activeIndex];
+        if (!video) return;
 
-              const video = activeWrapper.querySelector('video');
-              if (!video) return;
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    }, { threshold: 0.25 });
 
-              if (entry.isIntersecting) {
-                  // Slider kelihatan lagi di layar -> lanjutkan video yang tadi aktif
-                  video.play().catch(() => {});
-              } else {
-                  // Slider udah di-scroll keluar layar -> pause videonya
-                  video.pause();
-              }
-          });
-      }, { threshold: 0.25 }); // dianggap "keluar layar" kalau kelihatan kurang dari 25%
-
-      scrollPauseObserver.observe(container);
+    scrollPauseObserver.observe(container);
   }
 }
