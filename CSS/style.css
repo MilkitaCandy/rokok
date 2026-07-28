@@ -693,6 +693,38 @@ nav.scrolled .nav-links a {
    12. VIDEO INTRO SHOWCASE (PREMIUM SCALE EFFECT)
 ========================================= */
 
+.pause-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(15, 28, 21, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%) scale(0.75);
+  opacity: 0;
+  pointer-events: none; /* biar klik tetap tembus ke video di belakangnya */
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 6; /* di atas video, di bawah unmute-btn kalau masih ada */
+}
+ 
+.pause-icon svg {
+  width: 26px;
+  height: 26px;
+  fill: var(--gold);
+  margin-left: 3px; /* biar segitiga play keliatan center secara optik */
+}
+ 
+/* Cuma tampil kalau video ini yang lagi aktif (di tengah) DAN posisinya paused */
+.video-wrapper.active.is-paused .pause-icon {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
 /* Bungkus utama untuk ngatur area pandang */
 .slider-container {
   position: relative;

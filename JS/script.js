@@ -365,12 +365,19 @@ if (container && track) {
 
   // Sebagian video baru punya ukuran pasti setelah metadata termuat,
   // jadi re-center juga di titik ini biar tetap presisi di tengah.
+  // Sekalian pasang listener play/pause buat nampilin ikon pause otomatis,
+  // apapun penyebabnya (klik, auto-pause scroll, dll).
   wrappers.forEach((wrapper) => {
       const video = wrapper.querySelector('video');
       if (video) {
           video.addEventListener('loadedmetadata', () => {
               centerSlide(currentIndex, false);
           }, { once: true });
+
+          // Default: anggap paused dulu sampai event 'play' pertama nembak
+          wrapper.classList.add('is-paused');
+          video.addEventListener('play', () => wrapper.classList.remove('is-paused'));
+          video.addEventListener('pause', () => wrapper.classList.add('is-paused'));
       }
   });
 
